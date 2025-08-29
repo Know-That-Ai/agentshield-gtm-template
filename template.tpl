@@ -19,7 +19,7 @@ ___INFO___
     "displayName": "AgentShield",
     "thumbnail": ""
   },
-  "description": "AI agent detection pixel for protecting websites from automated bot traffic. Detects and blocks AI agents while allowing genuine human users.",
+  "description": "AI agent detection pixel for protecting websites from automated bot traffic",
   "containerContexts": [
     "WEB"
   ]
@@ -34,7 +34,6 @@ ___TEMPLATE_PARAMETERS___
     "name": "projectId",
     "displayName": "Project ID",
     "simpleValueType": true,
-    "help": "Your AgentShield project ID. You can find this in your AgentShield dashboard.",
     "valueValidators": [
       {
         "type": "NON_EMPTY"
@@ -46,7 +45,6 @@ ___TEMPLATE_PARAMETERS___
     "name": "apiEndpoint",
     "displayName": "API Endpoint (Optional)",
     "simpleValueType": true,
-    "help": "Custom API endpoint URL. Leave blank to use the default endpoint.",
     "defaultValue": ""
   },
   {
@@ -54,7 +52,6 @@ ___TEMPLATE_PARAMETERS___
     "name": "debugMode",
     "checkboxText": "Enable Debug Mode",
     "simpleValueType": true,
-    "help": "Enable debug logging in browser console. Recommended for testing only.",
     "defaultValue": false
   },
   {
@@ -62,7 +59,6 @@ ___TEMPLATE_PARAMETERS___
     "name": "sessionTimeout",
     "displayName": "Session Timeout (ms)",
     "simpleValueType": true,
-    "help": "Session timeout in milliseconds. Default is 1800000 (30 minutes).",
     "defaultValue": "1800000",
     "valueValidators": [
       {
@@ -75,7 +71,6 @@ ___TEMPLATE_PARAMETERS___
     "name": "respectDoNotTrack",
     "checkboxText": "Respect Do Not Track",
     "simpleValueType": true,
-    "help": "Respect user's Do Not Track browser setting.",
     "defaultValue": true
   },
   {
@@ -83,7 +78,6 @@ ___TEMPLATE_PARAMETERS___
     "name": "batchSize",
     "displayName": "Batch Size",
     "simpleValueType": true,
-    "help": "Number of events to batch before sending. Default is 10.",
     "defaultValue": "10",
     "valueValidators": [
       {
@@ -96,7 +90,6 @@ ___TEMPLATE_PARAMETERS___
     "name": "flushInterval",
     "displayName": "Flush Interval (ms)",
     "simpleValueType": true,
-    "help": "How often to flush batched events in milliseconds. Default is 5000 (5 seconds).",
     "defaultValue": "5000",
     "valueValidators": [
       {
@@ -109,7 +102,6 @@ ___TEMPLATE_PARAMETERS___
     "name": "enableFingerprinting",
     "checkboxText": "Enable Fingerprinting",
     "simpleValueType": true,
-    "help": "Enable advanced browser fingerprinting for better detection accuracy.",
     "defaultValue": true
   }
 ]
@@ -119,87 +111,188 @@ ___SANDBOXED_JS_FOR_WEB_TEMPLATE___
 
 const log = require('logToConsole');
 const injectScript = require('injectScript');
-const createQueue = require('createQueue');
-const getUrl = require('getUrl');
+const setInWindow = require('setInWindow');
+const encodeUriComponent = require('encodeUriComponent');
+const makeInteger = require('makeInteger');
 
-// Get template parameters
 const projectId = data.projectId;
 const apiEndpoint = data.apiEndpoint || '';
-const debugMode = data.debugMode || false;
-const sessionTimeout = data.sessionTimeout || 1800000;
+const debugMode = data.debugMode === true;
+const sessionTimeout = makeInteger(data.sessionTimeout) || 1800000;
 const respectDoNotTrack = data.respectDoNotTrack !== false;
-const batchSize = data.batchSize || 10;
-const flushInterval = data.flushInterval || 5000;
+const batchSize = makeInteger(data.batchSize) || 10;
+const flushInterval = makeInteger(data.flushInterval) || 5000;
 const enableFingerprinting = data.enableFingerprinting !== false;
-
-// Default CDN URL - this will be determined from the script source
-const defaultCdnUrl = 'https://kya.vouched.id';
 
 if (debugMode) {
   log('AgentShield GTM Template - Starting initialization');
-  log('Project ID:', projectId);
+  log('Configuration:', {
+    projectId: projectId,
+    apiEndpoint: apiEndpoint || 'default',
+    sessionTimeout: sessionTimeout,
+    respectDoNotTrack: respectDoNotTrack,
+    batchSize: batchSize,
+    flushInterval: flushInterval,
+    enableFingerprinting: enableFingerprinting
+  });
 }
 
-// Create the pixel script element
-const pixelScript = '(function() {' +
-  'var as = document.createElement("script");' +
-  'as.type = "text/javascript";' +
-  'as.async = true;' +
-  'as.src = "' + defaultCdnUrl + '/pixel.js";' +
-  'as.setAttribute("data-project-id", "' + projectId + '");' +
-  (apiEndpoint ? 'as.setAttribute("data-api-endpoint", "' + apiEndpoint + '");' : '') +
-  (debugMode ? 'as.setAttribute("data-debug", "true");' : '') +
-  'as.setAttribute("data-session-timeout", "' + sessionTimeout + '");' +
-  (respectDoNotTrack ? 'as.setAttribute("data-respect-dnt", "true");' : 'as.setAttribute("data-respect-dnt", "false");') +
-  'as.setAttribute("data-batch-size", "' + batchSize + '");' +
-  'as.setAttribute("data-flush-interval", "' + flushInterval + '");' +
-  (enableFingerprinting ? 'as.setAttribute("data-enable-fingerprinting", "true");' : 'as.setAttribute("data-enable-fingerprinting", "false");') +
-  'var s = document.getElementsByTagName("script")[0];' +
-  's.parentNode.insertBefore(as, s);' +
-  '})();';
+if (!projectId) {
+  log('AgentShield Error: Project ID is required');
+  return data.gtmOnFailure();
+}
 
-// Inject the script directly into the page
-const scriptElement = document.createElement('script');
-scriptElement.innerHTML = pixelScript;
-document.head.appendChild(scriptElement);
+setInWindow('_agentShieldConfig', {
+  projectId: projectId,
+  apiEndpoint: apiEndpoint,
+  debug: debugMode,
+  sessionTimeout: sessionTimeout,
+  respectDoNotTrack: respectDoNotTrack,
+  batchSize: batchSize,
+  flushInterval: flushInterval,
+  enableFingerprinting: enableFingerprinting
+}, true);
+
+const baseUrl = 'https://kya.vouched.id/pixel.js';
+let scriptUrl = baseUrl + '?project_id=' + encodeUriComponent(projectId);
+
+if (apiEndpoint) {
+  scriptUrl += '&api_endpoint=' + encodeUriComponent(apiEndpoint);
+}
+if (debugMode) {
+  scriptUrl += '&debug=true';
+}
+scriptUrl += '&session_timeout=' + sessionTimeout;
+scriptUrl += '&respect_dnt=' + respectDoNotTrack;
+scriptUrl += '&batch_size=' + batchSize;
+scriptUrl += '&flush_interval=' + flushInterval;
+scriptUrl += '&enable_fingerprinting=' + enableFingerprinting;
+
+const onSuccess = function() {
+  if (debugMode) {
+    log('AgentShield GTM Template - Pixel script loaded successfully');
+    log('Script URL:', scriptUrl);
+  }
+  data.gtmOnSuccess();
+};
+
+const onFailure = function() {
+  if (debugMode) {
+    log('AgentShield GTM Template - Failed to load pixel script');
+    log('Failed URL:', scriptUrl);
+  }
+  data.gtmOnFailure();
+};
 
 if (debugMode) {
-  log('AgentShield GTM Template - Pixel script injected successfully');
+  log('AgentShield GTM Template - Injecting script from:', scriptUrl);
 }
 
-// Call data.gtmOnSuccess when the tag is finished.
-data.gtmOnSuccess();
+injectScript(scriptUrl, onSuccess, onFailure);
 
 
 ___WEB_PERMISSIONS___
 
 [
   {
-    "type": "inject_script",
-    "urls": [
-      "https://kya.vouched.id/*",
-      "https://kya.vouched.id/*"
-    ]
+    "instance": {
+      "key": {
+        "publicId": "inject_script",
+        "versionId": "1"
+      },
+      "param": [
+        {
+          "key": "urls",
+          "value": {
+            "type": 2,
+            "listItem": [
+              {
+                "type": 1,
+                "string": "https://kya.vouched.id/*"
+              }
+            ]
+          }
+        }
+      ]
+    }
   },
   {
-    "type": "access_globals",
-    "keys": [
-      {
-        "key": "AgentShield",
-        "read": true,
-        "write": true,
-        "execute": false
-      }
-    ]
+    "instance": {
+      "key": {
+        "publicId": "logging",
+        "versionId": "1"
+      },
+      "param": [
+        {
+          "key": "environments",
+          "value": {
+            "type": 1,
+            "string": "debug"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "instance": {
+      "key": {
+        "publicId": "access_globals",
+        "versionId": "1"
+      },
+      "param": [
+        {
+          "key": "keys",
+          "value": {
+            "type": 2,
+            "listItem": [
+              {
+                "type": 3,
+                "mapKey": [
+                  {
+                    "type": 1,
+                    "string": "key"
+                  },
+                  {
+                    "type": 1,
+                    "string": "read"
+                  },
+                  {
+                    "type": 1,
+                    "string": "write"
+                  },
+                  {
+                    "type": 1,
+                    "string": "execute"
+                  }
+                ],
+                "mapValue": [
+                  {
+                    "type": 1,
+                    "string": "_agentShieldConfig"
+                  },
+                  {
+                    "type": 8,
+                    "boolean": true
+                  },
+                  {
+                    "type": 8,
+                    "boolean": true
+                  },
+                  {
+                    "type": 8,
+                    "boolean": false
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
   }
 ]
 
 
 ___TESTS___
 
-[]
-
-
-___NOTES___
-
-Created on 8/21/2025, 12:00:00 PM
+scenarios: []
