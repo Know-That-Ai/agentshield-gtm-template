@@ -178,7 +178,7 @@ ___WEB_PERMISSIONS___
     "type": "inject_script",
     "urls": [
       "https://kya.vouched.id/*",
-      "https://agentshield.io/*"
+      "https://kya.vouched.id/*"
     ]
   },
   {

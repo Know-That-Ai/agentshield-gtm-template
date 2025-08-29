@@ -87,8 +87,7 @@ Configure triggers based on your needs:
 
 For questions or issues:
 
-- **Documentation**: [https://agentshield.io/docs](https://agentshield.io/docs)
-- **Support**: [https://agentshield.io/support](https://agentshield.io/support)
+- **Documentation**: [https://kya.vouched.id/docs](https://kya.vouched.id/docs)
 - **GitHub Issues**: [Report template issues here](https://github.com/kya-os/agentshield-gtm-template/issues)
 
 ## License
@@ -101,4 +100,4 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 
 ---
 
-**Note**: This template requires an active AgentShield account. Get started at [https://agentshield.io](https://agentshield.io).
+**Note**: This template requires an active AgentShield account. Get started at [https://kya.vouched.id](https://kya.vouched.id).
