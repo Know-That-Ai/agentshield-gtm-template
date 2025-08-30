@@ -17,8 +17,7 @@ ___INFO___
   "categories": ["ANALYTICS", "TAG_MANAGEMENT"],
   "brand": {
     "id": "brand_dummy",
-    "displayName": "AgentShield",
-    "thumbnail": ""
+    "displayName": "AgentShield"
   },
   "description": "AI agent detection pixel for protecting websites from automated bot traffic",
   "containerContexts": [
@@ -39,28 +38,30 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "NON_EMPTY"
       }
-    ]
+    ],
+    "help": "Your AgentShield project ID. You can find this in your AgentShield dashboard."
   },
   {
     "type": "TEXT",
     "name": "apiEndpoint",
     "displayName": "API Endpoint (Optional)",
     "simpleValueType": true,
-    "defaultValue": ""
+    "help": "Custom API endpoint URL. Leave blank to use the default endpoint."
   },
   {
     "type": "CHECKBOX",
     "name": "debugMode",
     "checkboxText": "Enable Debug Mode",
     "simpleValueType": true,
-    "defaultValue": false
+    "help": "Enable debug logging in browser console. Recommended for testing only."
   },
   {
     "type": "TEXT",
     "name": "sessionTimeout",
     "displayName": "Session Timeout (ms)",
     "simpleValueType": true,
-    "defaultValue": "1800000",
+    "help": "Session timeout in milliseconds. Default is 1800000 (30 minutes).",
+    "defaultValue": 1800000,
     "valueValidators": [
       {
         "type": "POSITIVE_NUMBER"
@@ -72,26 +73,30 @@ ___TEMPLATE_PARAMETERS___
     "name": "respectDoNotTrack",
     "checkboxText": "Respect Do Not Track",
     "simpleValueType": true,
-    "defaultValue": true
+    "help": "Respect user's Do Not Track browser setting.",
+    "defaultValue": "checked",
+    "displayName": "Respect Do Not Track"
   },
   {
     "type": "TEXT",
     "name": "batchSize",
     "displayName": "Batch Size",
     "simpleValueType": true,
-    "defaultValue": "10",
+    "defaultValue": 10,
     "valueValidators": [
       {
         "type": "POSITIVE_NUMBER"
       }
-    ]
+    ],
+    "help": "Number of events to batch before sending. Default is 10."
   },
   {
     "type": "TEXT",
     "name": "flushInterval",
     "displayName": "Flush Interval (ms)",
     "simpleValueType": true,
-    "defaultValue": "5000",
+    "help": "How often to flush batched events in milliseconds. Default is 5000 (5 seconds).",
+    "defaultValue": 5000,
     "valueValidators": [
       {
         "type": "POSITIVE_NUMBER"
@@ -103,7 +108,9 @@ ___TEMPLATE_PARAMETERS___
     "name": "enableFingerprinting",
     "checkboxText": "Enable Fingerprinting",
     "simpleValueType": true,
-    "defaultValue": true
+    "help": "Enable advanced browser fingerprinting for better detection accuracy.",
+    "displayName": "Enable Fingerprinting",
+    "defaultValue": "checked"
   }
 ]
 
@@ -116,6 +123,7 @@ const setInWindow = require('setInWindow');
 const encodeUriComponent = require('encodeUriComponent');
 const makeInteger = require('makeInteger');
 
+// Get template parameters with proper type conversion
 const projectId = data.projectId;
 const apiEndpoint = data.apiEndpoint || '';
 const debugMode = data.debugMode === true;
@@ -125,6 +133,7 @@ const batchSize = makeInteger(data.batchSize) || 10;
 const flushInterval = makeInteger(data.flushInterval) || 5000;
 const enableFingerprinting = data.enableFingerprinting !== false;
 
+// Log initialization if debug mode is enabled
 if (debugMode) {
   log('AgentShield GTM Template - Starting initialization');
   log('Configuration:', {
@@ -138,11 +147,13 @@ if (debugMode) {
   });
 }
 
+// Validate required fields
 if (!projectId) {
   log('AgentShield Error: Project ID is required');
   return data.gtmOnFailure();
 }
 
+// Set configuration in window object for the script to read
 setInWindow('_agentShieldConfig', {
   projectId: projectId,
   apiEndpoint: apiEndpoint,
@@ -154,9 +165,11 @@ setInWindow('_agentShieldConfig', {
   enableFingerprinting: enableFingerprinting
 }, true);
 
+// Build the script URL with query parameters
 const baseUrl = 'https://kya.vouched.id/pixel.js';
 let scriptUrl = baseUrl + '?project_id=' + encodeUriComponent(projectId);
 
+// Add optional parameters to URL
 if (apiEndpoint) {
   scriptUrl += '&api_endpoint=' + encodeUriComponent(apiEndpoint);
 }
@@ -169,6 +182,7 @@ scriptUrl += '&batch_size=' + batchSize;
 scriptUrl += '&flush_interval=' + flushInterval;
 scriptUrl += '&enable_fingerprinting=' + enableFingerprinting;
 
+// Success callback
 const onSuccess = function() {
   if (debugMode) {
     log('AgentShield GTM Template - Pixel script loaded successfully');
@@ -177,6 +191,7 @@ const onSuccess = function() {
   data.gtmOnSuccess();
 };
 
+// Failure callback
 const onFailure = function() {
   if (debugMode) {
     log('AgentShield GTM Template - Failed to load pixel script');
@@ -185,6 +200,7 @@ const onFailure = function() {
   data.gtmOnFailure();
 };
 
+// Inject the AgentShield pixel script
 if (debugMode) {
   log('AgentShield GTM Template - Injecting script from:', scriptUrl);
 }
@@ -195,45 +211,6 @@ injectScript(scriptUrl, onSuccess, onFailure);
 ___WEB_PERMISSIONS___
 
 [
-  {
-    "instance": {
-      "key": {
-        "publicId": "inject_script",
-        "versionId": "1"
-      },
-      "param": [
-        {
-          "key": "urls",
-          "value": {
-            "type": 2,
-            "listItem": [
-              {
-                "type": 1,
-                "string": "https://kya.vouched.id/*"
-              }
-            ]
-          }
-        }
-      ]
-    }
-  },
-  {
-    "instance": {
-      "key": {
-        "publicId": "logging",
-        "versionId": "1"
-      },
-      "param": [
-        {
-          "key": "environments",
-          "value": {
-            "type": 1,
-            "string": "debug"
-          }
-        }
-      ]
-    }
-  },
   {
     "instance": {
       "key": {
@@ -289,7 +266,55 @@ ___WEB_PERMISSIONS___
           }
         }
       ]
-    }
+    },
+    "clientAnnotations": {
+      "isEditedByUser": true
+    },
+    "isRequired": true
+  },
+  {
+    "instance": {
+      "key": {
+        "publicId": "logging",
+        "versionId": "1"
+      },
+      "param": [
+        {
+          "key": "environments",
+          "value": {
+            "type": 1,
+            "string": "debug"
+          }
+        }
+      ]
+    },
+    "isRequired": true
+  },
+  {
+    "instance": {
+      "key": {
+        "publicId": "inject_script",
+        "versionId": "1"
+      },
+      "param": [
+        {
+          "key": "urls",
+          "value": {
+            "type": 2,
+            "listItem": [
+              {
+                "type": 1,
+                "string": "https://kya.vouched.id/*"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "clientAnnotations": {
+      "isEditedByUser": true
+    },
+    "isRequired": true
   }
 ]
 
@@ -301,4 +326,4 @@ scenarios: []
 
 ___NOTES___
 
-Created on 08/29/2025, 12:00:00 AM
+Created on 8/29/2025, 10:56:04 PM
