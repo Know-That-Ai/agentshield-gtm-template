@@ -14,6 +14,7 @@ ___INFO___
   "version": 1,
   "securityGroups": [],
   "displayName": "AgentShield Pixel",
+  "categories": ["ANALYTICS", "TAG_MANAGEMENT"],
   "brand": {
     "id": "brand_dummy",
     "displayName": "AgentShield",
