@@ -1,5 +1,5 @@
 homepage: "https://github.com/Know-That-Ai/agentshield-gtm-template"
 documentation: "https://kya.vouched.id/docs/quick-start#google-tag-manager-quick-start"
 versions:
-  - sha: 91440a41ec840651a76a26c3d44f7373db4b9b97
+  - sha: c968b21148975b683b48e9b00e36155a80a34864
     changeNotes: Initial release of AgentShield GTM template for AI agent detection
