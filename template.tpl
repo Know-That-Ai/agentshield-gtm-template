@@ -291,8 +291,3 @@ ___WEB_PERMISSIONS___
     }
   }
 ]
-
-
-___TESTS___
-
-scenarios: []
